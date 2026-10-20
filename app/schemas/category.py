@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.product import ProductSummary
 
 class CategoryCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
@@ -8,5 +9,13 @@ class CategoryResponse(BaseModel):
     id: int
     name: str
     description: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CategoryWithProducts(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    products: list[ProductSummary]
 
     model_config = ConfigDict(from_attributes=True)

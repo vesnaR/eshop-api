@@ -4,11 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models.category import Category
-from app.schemas.category import CategoryCreate, CategoryResponse
+from app.schemas.category import CategoryCreate, CategoryResponse, CategoryWithProducts
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
-@router.get("/", response_model=list[CategoryResponse])
+@router.get("/", response_model=list[CategoryWithProducts])
 def get_categories(db: Session = Depends(get_db)):
     return db.query(Category).order_by(Category.id).all()
 
