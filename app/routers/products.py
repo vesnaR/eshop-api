@@ -20,7 +20,10 @@ def get_products(
     max_price: float | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
+    sort_by: str=Query(default="id", pattern="^(id|name|price)$"),
+    order: str=Query(default="asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
+   
 ):
     query = db.query(Product)
 
@@ -38,12 +41,25 @@ def get_products(
 
     total = query.count()
 
+    
+    sort_column = {
+        "id": Product.id,
+        "name": Product.name,
+        "price": Product.price,
+    }[sort_by]
+
+    if order == "desc":
+        query = query.order_by(sort_column.desc(), Product.id.asc())
+    else:
+        query = query.order_by(sort_column.asc(), Product.id.asc())
+
     products = (
-        query.order_by(Product.id)
+        query
         .offset(skip)
         .limit(limit)
         .all()
     )
+
 
     pages = ceil(total / limit) if total > 0 else 0
 
