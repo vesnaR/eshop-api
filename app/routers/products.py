@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.schemas.pagination import PaginatedResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from math import ceil
 from app.db.models.product import Product
 from app.db.models.category import Category
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
@@ -9,9 +11,15 @@ from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-@router.get("/", response_model=list[ProductResponse])
+
+@router.get("/", response_model=PaginatedResponse[ProductResponse])
 def get_products(
     search: str | None = None,
+    category_id: int | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     query = db.query(Product)
@@ -19,7 +27,34 @@ def get_products(
     if search:
         query = query.filter(Product.name.ilike(f"%{search}%"))
 
-    return query.order_by(Product.id).all()
+    if category_id is not None:
+        query = query.filter(Product.category_id == category_id)
+
+    if min_price is not None:
+        query = query.filter(Product.price >= min_price)
+
+    if max_price is not None:
+        query = query.filter(Product.price <= max_price)
+
+    total = query.count()
+
+    products = (
+        query.order_by(Product.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    pages = ceil(total / limit) if total > 0 else 0
+
+    return {
+        "items": products,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "pages": pages,
+    }
+
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
