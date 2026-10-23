@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from app.core.security import require_admin
 from app.schemas.pagination import PaginatedResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.models.user import User
 from math import ceil
 from app.db.models.product import Product
 from app.db.models.category import Category
@@ -93,6 +95,7 @@ def get_product(
 def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
 ):
     category = db.query(Category).filter(
         Category.id == product_data.category_id
@@ -116,6 +119,7 @@ def update_product(
     product_id: int,
     product_data: ProductUpdate,
     db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
 
@@ -150,6 +154,7 @@ def update_product(
 def delete_product(
     product_id: int,
     db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
 

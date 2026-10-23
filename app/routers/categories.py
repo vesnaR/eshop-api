@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.core.security import require_admin
+from app.db.models.user import User
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -15,8 +17,9 @@ def get_categories(db: Session = Depends(get_db)):
 @router.post("/", response_model=CategoryResponse, status_code=201)
 def create_category(
     category_data: CategoryCreate, 
-    db: Session = Depends(get_db)
-    ):
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
 
     category= Category(
         name=category_data.name,
