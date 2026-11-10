@@ -8,41 +8,28 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db.base import Base
 from app.db.database import get_db
-
-# Import models so SQLAlchemy registers their tables
 from app.db.models.user import User
 from app.db.models.category import Category
 from app.db.models.product import Product
+from app.core.security import create_access_token
 
 
 @pytest.fixture
-def client():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+def admin_headers(client):
+    db = next(app.dependency_overrides[get_db]())
+
+    admin = User(
+        email="admin@test.com",
+        password_hash="test_hash",
+        role="admin",
     )
 
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
-    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
 
-    Base.metadata.create_all(bind=engine)
+    token = create_access_token(subject=str(admin.id))
+    db.close()
 
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    return {"Authorization": f"Bearer {token}"}
 
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()
